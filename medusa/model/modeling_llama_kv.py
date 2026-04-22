@@ -42,6 +42,27 @@ if is_flash_attn_available():
 
 logger = logging.get_logger(__name__)
 
+
+def _patch_config_defaults(config):
+    """Ensure config has attributes expected by the v4.34 model code.
+
+    Older model configs (e.g., LLaMA v1 / Vicuna v1.3) may lack attributes
+    that were added in later versions of LlamaConfig. This patches in the
+    defaults that were present in transformers v4.34.
+    """
+    if not hasattr(config, "rope_theta"):
+        config.rope_theta = 10000.0
+    if not hasattr(config, "attention_bias"):
+        config.attention_bias = False
+    if not hasattr(config, "num_key_value_heads"):
+        config.num_key_value_heads = config.num_attention_heads
+    if not hasattr(config, "pretraining_tp"):
+        config.pretraining_tp = 1
+    if not hasattr(config, "rope_scaling"):
+        config.rope_scaling = None
+    return config
+
+
 _CONFIG_FOR_DOC = "LlamaConfig"
 
 
@@ -778,6 +799,7 @@ class LlamaModel(LlamaPreTrainedModel):
     """
 
     def __init__(self, config: LlamaConfig):
+        _patch_config_defaults(config)
         super().__init__(config)
         self.padding_idx = config.pad_token_id
         self.vocab_size = config.vocab_size
