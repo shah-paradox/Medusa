@@ -22,10 +22,16 @@ from transformers.pytorch_utils import ALL_LAYERNORM_LAYERS
 from transformers.utils import (
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
-    is_flash_attn_available,
     logging,
     replace_return_docstrings,
 )
+
+# Compatibility shim: is_flash_attn_available was removed in transformers >=4.36
+try:
+    from transformers.utils import is_flash_attn_2_available as is_flash_attn_available
+except ImportError:
+    from transformers.utils import is_flash_attn_available
+
 from transformers.models.llama.configuration_llama import LlamaConfig
 
 
@@ -43,7 +49,7 @@ def _get_unpad_data(padding_mask):
     seqlens_in_batch = padding_mask.sum(dim=-1, dtype=torch.int32)
     indices = torch.nonzero(padding_mask.flatten(), as_tuple=False).flatten()
     max_seqlen_in_batch = seqlens_in_batch.max().item()
-    cu_seqlens = F.pad(torch.cumsum(seqlens_in_batch, dim=0, dtype=torch.torch.int32), (1, 0))
+    cu_seqlens = F.pad(torch.cumsum(seqlens_in_batch, dim=0, dtype=torch.int32), (1, 0))
     return (
         indices,
         cu_seqlens,
