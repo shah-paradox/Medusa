@@ -161,7 +161,13 @@ class MedusaModelABC(nn.Module):
             else:
                 filename = hf_hub_download(pretrained_model_name_or_path, "medusa_lm_head.pt")
             medusa_head_state_dict = torch.load(filename, map_location=model.device, weights_only=False)
-            model.medusa_head.load_state_dict(medusa_head_state_dict, strict=False)
+            # assign=True is required for PyTorch 2.1+ with accelerate offloading,
+            # where params may be on the meta device (copy is a no-op for meta tensors).
+            try:
+                model.medusa_head.load_state_dict(medusa_head_state_dict, strict=False, assign=True)
+            except TypeError:
+                # Older PyTorch doesn't support assign kwarg
+                model.medusa_head.load_state_dict(medusa_head_state_dict, strict=False)
             return model
         
 
