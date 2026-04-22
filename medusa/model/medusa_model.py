@@ -98,6 +98,10 @@ class MedusaModelABC(nn.Module):
             **kwargs: Additional keyword arguments (e.g., load_in_8bit, load_in_4bit)
                       passed through by newer versions of transformers' from_pretrained.
         """
+        # Strip quantization kwargs — they are handled by from_pretrained(),
+        # not by __init__(). The custom KV model classes don't accept them.
+        kwargs.pop("load_in_8bit", None)
+        kwargs.pop("load_in_4bit", None)
         super().__init__(config, **kwargs)
         # For compatibility with the old APIs
 
