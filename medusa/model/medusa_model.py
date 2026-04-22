@@ -90,12 +90,15 @@ class MedusaModelABC(nn.Module):
     def __init__(
         self,
         config,
+        **kwargs,
     ):
         """
         Args:
             config (PretrainedConfig): The configuration of the MedusaModel.
+            **kwargs: Additional keyword arguments (e.g., load_in_8bit, load_in_4bit)
+                      passed through by newer versions of transformers' from_pretrained.
         """
-        super().__init__(config)
+        super().__init__(config, **kwargs)
         # For compatibility with the old APIs
 
         medusa_num_heads = config.medusa_num_heads
