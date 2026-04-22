@@ -388,9 +388,15 @@ def train():
     medusa_config.save_pretrained(training_args.output_dir)
 
     # Start trainner
-    trainer = CustomizedTrainer(
-        model=medusa_lm_head, tokenizer=tokenizer, args=training_args, **data_module
-    )
+    # Newer transformers renamed 'tokenizer' to 'processing_class'
+    try:
+        trainer = CustomizedTrainer(
+            model=medusa_lm_head, processing_class=tokenizer, args=training_args, **data_module
+        )
+    except TypeError:
+        trainer = CustomizedTrainer(
+            model=medusa_lm_head, tokenizer=tokenizer, args=training_args, **data_module
+        )
 
     if list(pathlib.Path(training_args.output_dir).glob("checkpoint-*")):
         trainer.train(resume_from_checkpoint=True)
@@ -404,12 +410,16 @@ def train():
         lm_head = medusa_lm_head.module.medusa_head
     else:
         lm_head = medusa_lm_head.medusa_head
-    import deepspeed
-    with deepspeed.zero.GatheredParameters(lm_head.parameters()):
+    try:
+        import deepspeed
+        with deepspeed.zero.GatheredParameters(lm_head.parameters()):
+            state_dict = lm_head.state_dict()
+    except (ImportError, AssertionError):
+        # deepspeed not available or not using ZeRO — just get state dict directly
         state_dict = lm_head.state_dict()
 
     # Save Medusa heads
-    if local_rank == 0:
+    if local_rank in (None, 0):
         # Modify the tokenizer internal state before saving.
         tokenizer.encode("Test", truncation=None, padding="do_not_pad")
         tokenizer.save_pretrained(training_args.output_dir)
